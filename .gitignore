@@ -1,4 +1,5 @@
 node_modules/
 frember.db
+frember.json
 .env
 *.log
