@@ -1,0 +1,4 @@
+node_modules/
+frember.db
+.env
+*.log

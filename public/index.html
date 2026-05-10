@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Frember — Stay close to the people who matter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ─── Header ──────────────────────────────────────────────────────────── -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <div class="brand-mark">F</div>
+        <div>
+          <div class="brand-name">Frember</div>
+          <div class="brand-tagline">Stay close to the people who matter</div>
+        </div>
+      </div>
+      <button class="icon-btn settings-trigger" aria-label="Notification settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+        Notifications
+      </button>
+    </div>
+  </header>
+
+  <!-- ─── Main ────────────────────────────────────────────────────────────── -->
+  <main class="main-content">
+    <div class="container">
+
+      <!-- Stats row -->
+      <section class="stats-section" aria-label="Summary">
+        <div class="stat-card">
+          <div class="stat-top">
+            <span class="stat-dot dot-red" aria-hidden="true"></span>
+            <span class="stat-label">Overdue</span>
+          </div>
+          <div class="stat-number" id="count-overdue">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-top">
+            <span class="stat-dot dot-amber" aria-hidden="true"></span>
+            <span class="stat-label">Due soon</span>
+          </div>
+          <div class="stat-number" id="count-soon">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-top">
+            <span class="stat-dot dot-green" aria-hidden="true"></span>
+            <span class="stat-label">Good shape</span>
+          </div>
+          <div class="stat-number" id="count-good">—</div>
+        </div>
+      </section>
+
+      <!-- Friends list -->
+      <section class="friends-section">
+        <div class="section-header">
+          <h2 class="section-title">Your people</h2>
+          <button class="btn btn-primary add-friend-trigger">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add friend
+          </button>
+        </div>
+
+        <div class="friends-grid" id="friends-grid">
+          <div class="loading-state" id="loading-state">
+            <div class="spinner" aria-label="Loading"></div>
+          </div>
+        </div>
+
+        <div class="empty-state hidden" id="empty-state">
+          <div class="empty-icon" aria-hidden="true">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </div>
+          <h3 class="empty-title">No friends added yet</h3>
+          <p class="empty-desc">Start tracking your connections. Add a friend and Frember will remind you to reach out before the bond fades.</p>
+          <button class="btn btn-primary add-friend-trigger">Add your first friend</button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ─── Add / Edit Friend Modal ─────────────────────────────────────────── -->
+  <div class="modal-backdrop hidden" id="friend-modal-backdrop">
+    <div class="modal" id="friend-modal" role="dialog" aria-modal="true" aria-labelledby="friend-modal-title">
+      <div class="modal-header">
+        <h2 class="modal-title" id="friend-modal-title">Add a friend</h2>
+        <button class="icon-btn modal-close" data-closes="friend-modal-backdrop" aria-label="Close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <form id="friend-form" novalidate>
+        <input type="hidden" id="friend-id">
+
+        <div class="form-group">
+          <label for="friend-name" class="form-label">Name</label>
+          <input type="text" id="friend-name" class="form-input" placeholder="e.g. Sarah Chen" autocomplete="off" required>
+        </div>
+
+        <div class="form-group">
+          <fieldset>
+            <legend class="form-label">Tier</legend>
+            <div class="tier-options">
+              <label class="tier-option">
+                <input type="radio" name="tier" value="best" required>
+                <span class="tier-option-inner">
+                  <span class="tier-option-name">Best Friend</span>
+                  <span class="tier-option-days">90-day cycle</span>
+                </span>
+              </label>
+              <label class="tier-option">
+                <input type="radio" name="tier" value="good">
+                <span class="tier-option-inner">
+                  <span class="tier-option-name">Good Friend</span>
+                  <span class="tier-option-days">35-day cycle</span>
+                </span>
+              </label>
+              <label class="tier-option">
+                <input type="radio" name="tier" value="casual">
+                <span class="tier-option-inner">
+                  <span class="tier-option-name">Casual Friend</span>
+                  <span class="tier-option-days">21-day cycle</span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+        </div>
+
+        <div class="form-group">
+          <label for="friend-last-contact" class="form-label">Last time you talked</label>
+          <input type="date" id="friend-last-contact" class="form-input" required>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" data-closes="friend-modal-backdrop">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="friend-submit">Add friend</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ─── Notification Settings Modal ─────────────────────────────────────── -->
+  <div class="modal-backdrop hidden" id="settings-modal-backdrop">
+    <div class="modal modal-scroll" id="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+      <div class="modal-header">
+        <h2 class="modal-title" id="settings-modal-title">Email notifications</h2>
+        <button class="icon-btn modal-close" data-closes="settings-modal-backdrop" aria-label="Close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <form id="settings-form" novalidate>
+
+        <div class="form-group">
+          <div class="toggle-row">
+            <div>
+              <div class="form-label" style="margin-bottom:2px;">Enable daily reminders</div>
+              <div class="form-hint">Get a morning email listing overdue and due-soon friends.</div>
+            </div>
+            <label class="toggle" aria-label="Enable notifications">
+              <input type="checkbox" id="settings-enabled">
+              <span class="toggle-track" aria-hidden="true"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group" style="flex:1;">
+            <label for="settings-email" class="form-label">Send reminders to</label>
+            <input type="email" id="settings-email" class="form-input" placeholder="you@example.com">
+          </div>
+          <div class="form-group" style="width:110px;">
+            <label for="settings-notify-time" class="form-label">Send at</label>
+            <input type="time" id="settings-notify-time" class="form-input" value="08:00">
+          </div>
+        </div>
+
+        <div class="divider-label">SMTP server</div>
+
+        <div class="smtp-presets" role="group" aria-label="Email provider presets">
+          <button type="button" class="preset-btn" data-host="smtp.gmail.com" data-port="587">Gmail</button>
+          <button type="button" class="preset-btn" data-host="smtp-mail.outlook.com" data-port="587">Outlook</button>
+          <button type="button" class="preset-btn" data-host="smtp.mail.yahoo.com" data-port="587">Yahoo</button>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group" style="flex:1;">
+            <label for="settings-smtp-host" class="form-label">Host</label>
+            <input type="text" id="settings-smtp-host" class="form-input" placeholder="smtp.gmail.com">
+          </div>
+          <div class="form-group" style="width:90px;">
+            <label for="settings-smtp-port" class="form-label">Port</label>
+            <input type="number" id="settings-smtp-port" class="form-input" placeholder="587" min="1" max="65535">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="settings-smtp-user" class="form-label">Username</label>
+          <input type="text" id="settings-smtp-user" class="form-input" placeholder="you@gmail.com" autocomplete="username">
+        </div>
+
+        <div class="form-group">
+          <label for="settings-smtp-password" class="form-label">Password</label>
+          <input type="password" id="settings-smtp-password" class="form-input" placeholder="Leave blank to keep current" autocomplete="current-password">
+          <p class="form-hint">For Gmail, create an <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">App Password</a> instead of using your regular password.</p>
+        </div>
+
+        <div class="form-actions" style="margin-top:4px;">
+          <button type="button" class="btn btn-ghost" id="test-email-btn">Send test</button>
+          <button type="submit" class="btn btn-primary">Save settings</button>
+        </div>
+
+        <div id="settings-message" class="settings-message hidden" role="status" aria-live="polite"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ─── Confirm Delete Modal ─────────────────────────────────────────────── -->
+  <div class="modal-backdrop hidden" id="confirm-modal-backdrop">
+    <div class="modal modal-sm" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
+      <div class="modal-header" style="margin-bottom:12px;">
+        <h2 class="modal-title" id="confirm-modal-title">Remove friend?</h2>
+      </div>
+      <p class="confirm-body">This will permanently remove <strong id="confirm-name"></strong> from your list.</p>
+      <div class="form-actions" style="margin-top:20px;">
+        <button class="btn btn-ghost" id="confirm-cancel">Cancel</button>
+        <button class="btn btn-danger" id="confirm-delete">Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
