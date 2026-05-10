@@ -1,23 +1,15 @@
-const low = require('lowdb');
-const FileSync = require('lowdb/adapters/FileSync');
-const path = require('path');
+require('dotenv').config();
+const { createClient } = require('@supabase/supabase-js');
 
-const adapter = new FileSync(path.join(__dirname, 'frember.json'));
-const db = low(adapter);
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+  throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables must be set');
+}
 
-db.defaults({
-  friends: [],
-  settings: {
-    email: '',
-    smtp_host: '',
-    smtp_port: 587,
-    smtp_user: '',
-    smtp_password: '',
-    notify_time: '08:00',
-    notifications_enabled: false,
-    last_notified: '',
-  },
-}).write();
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY,
+  { auth: { persistSession: false } }
+);
 
 const TIER_DAYS = { best: 90, good: 35, casual: 21 };
 
@@ -49,10 +41,4 @@ function computeFriend(friend) {
   };
 }
 
-function nextId() {
-  const friends = db.get('friends').value();
-  if (friends.length === 0) return 1;
-  return Math.max(...friends.map(f => f.id)) + 1;
-}
-
-module.exports = { db, computeFriend, TIER_DAYS, nextId };
+module.exports = { supabase, computeFriend, TIER_DAYS };

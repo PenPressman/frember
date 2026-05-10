@@ -1,21 +1,29 @@
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
-const { db, computeFriend, nextId } = require('./database');
+const { supabase, computeFriend } = require('./database');
 const { sendTestEmail } = require('./mailer');
 
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ── Health ────────────────────────────────────────────────────────────────────
+
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
 // ── Friends ──────────────────────────────────────────────────────────────────
 
-app.get('/api/friends', (req, res) => {
-  const friends = db.get('friends').value().map(computeFriend);
+app.get('/api/friends', async (req, res) => {
+  const { data, error } = await supabase.from('friends').select('*');
+  if (error) return res.status(500).json({ error: error.message });
+
+  const friends = data.map(computeFriend);
   friends.sort((a, b) => a.days_remaining - b.days_remaining);
   res.json(friends);
 });
 
-app.post('/api/friends', (req, res) => {
+app.post('/api/friends', async (req, res) => {
   const { name, tier, last_contact } = req.body;
   if (!name || !tier || !last_contact) {
     return res.status(400).json({ error: 'name, tier, and last_contact are required' });
@@ -24,22 +32,22 @@ app.post('/api/friends', (req, res) => {
     return res.status(400).json({ error: 'Invalid tier' });
   }
 
-  const friend = {
-    id: nextId(),
-    name: name.trim(),
-    tier,
-    last_contact,
-    created_at: new Date().toISOString(),
-  };
+  const { data, error } = await supabase
+    .from('friends')
+    .insert({ name: name.trim(), tier, last_contact })
+    .select()
+    .single();
 
-  db.get('friends').push(friend).write();
-  res.status(201).json(computeFriend(friend));
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(201).json(computeFriend(data));
 });
 
-app.put('/api/friends/:id', (req, res) => {
+app.put('/api/friends/:id', async (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const existing = db.get('friends').find({ id }).value();
-  if (!existing) return res.status(404).json({ error: 'Friend not found' });
+  const { data: existing, error: fetchErr } = await supabase
+    .from('friends').select('*').eq('id', id).single();
+
+  if (fetchErr || !existing) return res.status(404).json({ error: 'Friend not found' });
 
   const tier = req.body.tier ?? existing.tier;
   if (!['best', 'good', 'casual'].includes(tier)) {
@@ -52,40 +60,47 @@ app.put('/api/friends/:id', (req, res) => {
     last_contact: req.body.last_contact ?? existing.last_contact,
   };
 
-  db.get('friends').find({ id }).assign(updates).write();
-  const updated = db.get('friends').find({ id }).value();
-  res.json(computeFriend(updated));
+  const { data, error } = await supabase
+    .from('friends').update(updates).eq('id', id).select().single();
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(computeFriend(data));
 });
 
-app.delete('/api/friends/:id', (req, res) => {
+app.delete('/api/friends/:id', async (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const before = db.get('friends').value().length;
-  db.get('friends').remove({ id }).write();
-  const after = db.get('friends').value().length;
-  if (before === after) return res.status(404).json({ error: 'Friend not found' });
+  const { error } = await supabase.from('friends').delete().eq('id', id);
+  if (error) return res.status(500).json({ error: error.message });
   res.status(204).send();
 });
 
-app.post('/api/friends/:id/talked', (req, res) => {
+app.post('/api/friends/:id/talked', async (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const existing = db.get('friends').find({ id }).value();
-  if (!existing) return res.status(404).json({ error: 'Friend not found' });
-
   const today = new Date().toISOString().split('T')[0];
-  db.get('friends').find({ id }).assign({ last_contact: today }).write();
-  const updated = db.get('friends').find({ id }).value();
-  res.json(computeFriend(updated));
+
+  const { data, error } = await supabase
+    .from('friends').update({ last_contact: today }).eq('id', id).select().single();
+
+  if (error || !data) return res.status(404).json({ error: 'Friend not found' });
+  res.json(computeFriend(data));
 });
 
 // ── Settings ─────────────────────────────────────────────────────────────────
 
-app.get('/api/settings', (req, res) => {
-  const s = db.get('settings').value();
-  const { smtp_password, ...safe } = s;
+async function getSettings() {
+  const { data } = await supabase.from('settings').select('*').eq('id', 1).single();
+  return data;
+}
+
+app.get('/api/settings', async (req, res) => {
+  const settings = await getSettings();
+  if (!settings) return res.status(500).json({ error: 'Settings not found' });
+
+  const { smtp_password, ...safe } = settings;
   res.json(safe);
 });
 
-app.put('/api/settings', (req, res) => {
+app.put('/api/settings', async (req, res) => {
   const {
     email, smtp_host, smtp_port, smtp_user, smtp_password,
     notify_time, notifications_enabled,
@@ -100,17 +115,18 @@ app.put('/api/settings', (req, res) => {
   if (notify_time !== undefined)           updates.notify_time = notify_time;
   if (notifications_enabled !== undefined) updates.notifications_enabled = !!notifications_enabled;
 
-  db.get('settings').assign(updates).write();
+  const { error } = await supabase.from('settings').update(updates).eq('id', 1);
+  if (error) return res.status(500).json({ error: error.message });
   res.json({ success: true });
 });
 
 app.post('/api/settings/test-email', async (req, res) => {
-  const s = db.get('settings').value();
-  if (!s.email || !s.smtp_host || !s.smtp_user) {
+  const settings = await getSettings();
+  if (!settings?.email || !settings?.smtp_host || !settings?.smtp_user) {
     return res.status(400).json({ error: 'Save your email and SMTP settings first.' });
   }
   try {
-    await sendTestEmail(s);
+    await sendTestEmail(settings);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
